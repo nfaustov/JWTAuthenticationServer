@@ -16,14 +16,12 @@ final class UserModel: Model, Content {
     var id: UUID?
     @Field(key: "user_name")
     var userName: String
+    @Field(key: "email")
+    var email: String
     @Field(key: "password")
     var password: String
-    @Field(key: "created_by")
-    var createdBy: String?
     @Timestamp(key: "created_at", on: .create)
     var createdAt: Date?
-    @Field(key: "last_modified_by")
-    var lastModifiedBy: String?
     @Timestamp(key: "last_modified_at", on: .update)
     var lastModifiedAt: Date?
 
@@ -33,5 +31,14 @@ final class UserModel: Model, Content {
         self.id = id
         self.userName = userName
         self.password = password
+    }
+}
+
+extension UserModel: ModelAuthenticatable {
+    static var usernameKey: KeyPath<UserModel, Field<String>> = \UserModel.$userName
+    static var passwordHashKey: KeyPath<UserModel, Field<String>> = \UserModel.$password
+
+    func verify(password: String) throws -> Bool {
+        try Bcrypt.verify(password, created: self.password)
     }
 }
