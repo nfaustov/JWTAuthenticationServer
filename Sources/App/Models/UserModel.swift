@@ -42,3 +42,32 @@ extension UserModel: ModelAuthenticatable {
         try Bcrypt.verify(password, created: self.password)
     }
 }
+
+extension UserModel {
+    func generateToken(_ app: Application) throws -> String {
+        var expDate = Date()
+        expDate.addTimeInterval(86_400)
+        let exp = ExpirationClaim(value: expDate)
+
+        return try app.jwt.signers.get(kid: .private)!.sign(MyJWTPayload(id: self.id, username: self.userName, exp: exp))
+    }
+}
+
+struct JWTBearerAuthenticator: JWTAuthenticator {
+    typealias Payload = MyJWTPayload
+
+    func authenticate(jwt: Payload, for request: Request) -> EventLoopFuture<Void> {
+        do {
+            try jwt.verify(using: request.application.jwt.signers.get()!)
+
+            return UserModel
+                .find(jwt.id, on: request.db)
+                .unwrap(or: Abort(.notFound))
+                .map { user in
+                    request.auth.login(user)
+                }
+        } catch {
+            return request.eventLoop.makeSucceededVoidFuture()
+        }
+    }
+}
