@@ -27,9 +27,10 @@ final class UserModel: Model, Content {
 
     init() {}
 
-    init(id: UUID? = nil, userName: String) {
+    init(id: UUID? = nil, userName: String, email: String, password: String) {
         self.id = id
         self.userName = userName
+        self.email = email
         self.password = password
     }
 }
@@ -39,7 +40,8 @@ extension UserModel: ModelAuthenticatable {
     static var passwordHashKey: KeyPath<UserModel, Field<String>> = \UserModel.$password
 
     func verify(password: String) throws -> Bool {
-        try Bcrypt.verify(password, created: self.password)
+        let hash = try Bcrypt.hash(self.password)
+        return try Bcrypt.verify(password, created: hash)
     }
 }
 
@@ -67,7 +69,7 @@ struct JWTBearerAuthenticator: JWTAuthenticator {
                     request.auth.login(user)
                 }
         } catch {
-            return request.eventLoop.makeSucceededVoidFuture()
+            return request.eventLoop.makeSucceededFuture(())
         }
     }
 }

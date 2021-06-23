@@ -16,6 +16,10 @@ struct UserController: RouteCollection {
             user.post(use: login)
         }
 
+        users.group("create") { user in
+                user.post(use: create)
+            }
+
         users
             .grouped(JWTBearerAuthenticator())
             .group("me") { user in
@@ -38,7 +42,7 @@ struct UserController: RouteCollection {
 
     func login(req: Request) throws -> EventLoopFuture<String> {
         let userToLogin = try req.content.decode(UserLogin.self)
-        print("User to login \(userToLogin)")
+        print("User to login \(userToLogin.email)")
 
         return UserModel.query(on: req.db)
             .filter(\.$email == userToLogin.email)

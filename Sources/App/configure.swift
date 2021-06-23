@@ -17,12 +17,15 @@ public func configure(_ app: Application) throws {
     case.production:
         break
     default:
-        app.databases.use(.postgres(
-            hostname: "localhost",
-            username: "nfaustov",
-            password: "",
-            database: "usersdb"
-        ), as: .psql)
+        app.databases.use(
+            .postgres(
+                hostname: "localhost",
+                username: "nfaustov",
+                password: "",
+                database: "usersdb"
+            ),
+            as: .psql
+        )
     }
 
     app.migrations.add(CreateUser())
