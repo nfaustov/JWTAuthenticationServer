@@ -14,12 +14,12 @@ final class UserModel: Model, Content {
 
     @ID(key: .id)
     var id: UUID?
-    @Field(key: "user_name")
-    var userName: String
+    @Field(key: "name")
+    var name: String
     @Field(key: "email")
     var email: String
-    @Field(key: "password")
-    var password: String
+    @Field(key: "password_hash")
+    var passwordHash: String
     @Timestamp(key: "created_at", on: .create)
     var createdAt: Date?
     @Timestamp(key: "last_modified_at", on: .update)
@@ -27,21 +27,37 @@ final class UserModel: Model, Content {
 
     init() {}
 
-    init(id: UUID? = nil, userName: String, email: String, password: String) {
+    init(id: UUID? = nil, name: String, email: String, passwordHash: String) {
         self.id = id
-        self.userName = userName
+        self.name = name
         self.email = email
-        self.password = password
+        self.passwordHash = passwordHash
+    }
+}
+
+extension UserModel {
+    struct Create: Content {
+        var name: String
+        var email: String
+        var password: String
+        var confirmPassword: String
+    }
+}
+
+extension UserModel.Create: Validatable {
+    static func validations(_ validations: inout Validations) {
+        validations.add("name", as: String.self, is: !.empty)
+        validations.add("email", as: String.self, is: .email)
+        validations.add("password", as: String.self, is: .count(8...))
     }
 }
 
 extension UserModel: ModelAuthenticatable {
-    static var usernameKey: KeyPath<UserModel, Field<String>> = \UserModel.$userName
-    static var passwordHashKey: KeyPath<UserModel, Field<String>> = \UserModel.$password
+    static var usernameKey: KeyPath<UserModel, Field<String>> = \UserModel.$name
+    static var passwordHashKey: KeyPath<UserModel, Field<String>> = \UserModel.$passwordHash
 
     func verify(password: String) throws -> Bool {
-        let hash = try Bcrypt.hash(self.password)
-        return try Bcrypt.verify(password, created: hash)
+        try Bcrypt.verify(password, created: passwordHash)
     }
 }
 
@@ -51,7 +67,7 @@ extension UserModel {
         expDate.addTimeInterval(86_400)
         let exp = ExpirationClaim(value: expDate)
 
-        return try app.jwt.signers.get(kid: .private)!.sign(MyJWTPayload(id: self.id, username: self.userName, exp: exp))
+        return try app.jwt.signers.get(kid: .private)!.sign(MyJWTPayload(id: id, name: name, exp: exp))
     }
 }
 

@@ -29,14 +29,14 @@ struct UserController: RouteCollection {
 
     func payload(req: Request) throws -> EventLoopFuture<Me> {
         let user = try req.auth.require(UserModel.self)
-        let username = user.userName
+        let username = user.name
 
         return UserModel.query(on: req.db)
-            .filter(\.$userName == username)
+            .filter(\.$name == username)
             .first()
             .unwrap(or: Abort(.notFound))
             .map { user in
-                return Me(id: UUID(), username: user.userName)
+                return Me(id: UUID(), username: user.name)
             }
     }
 
@@ -66,14 +66,25 @@ struct UserController: RouteCollection {
 
     func get(req: Request) throws -> EventLoopFuture<UserModel> {
         return UserModel.query(on: req.db)
-            .filter(\.$userName == req.parameters.get("user_name") ?? "N/A")
+            .filter(\.$name == req.parameters.get("name") ?? "N/A")
             .first()
             .unwrap(or: Abort(.notFound))
     }
 
     func create(req: Request) throws -> EventLoopFuture<UserModel> {
-        let user = try req.content.decode(UserModel.self)
+        try UserModel.Create.validate(content: req)
+        let create = try req.content.decode(UserModel.Create.self)
 
-        return user.create(on: req.db).map { user }
+        guard create.password == create.confirmPassword else {
+            throw Abort(.badRequest, reason: "Password did not match")
+        }
+
+        let user = try UserModel(
+            name: create.name,
+            email: create.email,
+            passwordHash: Bcrypt.hash(create.password)
+        )
+
+        return user.save(on: req.db).map { user }
     }
 }

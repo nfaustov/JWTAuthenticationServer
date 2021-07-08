@@ -10,7 +10,7 @@ import JWT
 
 struct MyJWTPayload: JWTPayload {
     var id: UUID?
-    var username: String
+    var name: String
     var exp: ExpirationClaim
 
     func verify(using signer: JWTSigner) throws {
