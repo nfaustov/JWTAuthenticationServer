@@ -40,7 +40,7 @@ struct UserController: RouteCollection {
             }
     }
 
-    func login(req: Request) throws -> EventLoopFuture<String> {
+    func login(req: Request) throws -> EventLoopFuture<[String: String]> {
         let userToLogin = try req.content.decode(UserLogin.self)
         print("User to login \(userToLogin.email)")
 
@@ -58,8 +58,9 @@ struct UserController: RouteCollection {
 
                 req.auth.login(databaseUser)
                 let user = try req.auth.require(UserModel.self)
+                let token = try user.generateToken(req.application)
 
-                return try user.generateToken(req.application)
+                return ["token": token]
             }
     }
 
