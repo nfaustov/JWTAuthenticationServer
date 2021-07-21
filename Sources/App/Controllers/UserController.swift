@@ -12,16 +12,18 @@ struct UserController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let users = routes.grouped("users")
 
-        users.group("login") { user in
-            user.post(use: login)
-        }
+        users
+            .grouped(UserModel.authenticator())
+            .group("login") { user in
+                user.post(use: login)
+            }
 
         users.group("create") { user in
                 user.post(use: create)
             }
 
         users
-            .grouped(JWTBearerAuthenticator())
+            .grouped(UserToken.authenticator(), UserModel.guardMiddleware())
             .group("me") { user in
                 user.get(use: payload)
             }
@@ -40,28 +42,11 @@ struct UserController: RouteCollection {
             }
     }
 
-    func login(req: Request) throws -> EventLoopFuture<[String: String]> {
-        let userToLogin = try req.content.decode(UserLogin.self)
-        print("User to login \(userToLogin.email)")
+    func login(req: Request) throws -> EventLoopFuture<UserToken> {
+        let user = try req.auth.require(UserModel.self)
+        let token = try user.generateToken(req.application)
 
-        return UserModel.query(on: req.db)
-            .filter(\.$email == userToLogin.email)
-            .first()
-            .unwrap(or: Abort(.notFound))
-            .flatMapThrowing { databaseUser in
-                let verified = try databaseUser.verify(password: userToLogin.password)
-                print("Attempt verify \(verified)")
-
-                if verified == false {
-                    throw Abort(.unauthorized)
-                }
-
-                req.auth.login(databaseUser)
-                let user = try req.auth.require(UserModel.self)
-                let token = try user.generateToken(req.application)
-
-                return ["token": token]
-            }
+        return token.save(on: req.db).map { token }
     }
 
     func get(req: Request) throws -> EventLoopFuture<UserModel> {

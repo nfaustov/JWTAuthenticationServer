@@ -29,6 +29,7 @@ public func configure(_ app: Application) throws {
     }
 
     app.migrations.add(CreateUser())
+    app.migrations.add(CreateUserToken())
 
     let privateKey = try String(contentsOfFile: app.directory.workingDirectory + "jwtRS256.pem")
     let privateSigner = try JWTSigner.rs256(key: .private(pem: privateKey.bytes))

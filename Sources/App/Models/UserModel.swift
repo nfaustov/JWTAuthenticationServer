@@ -53,7 +53,7 @@ extension UserModel.Create: Validatable {
 }
 
 extension UserModel: ModelAuthenticatable {
-    static var usernameKey: KeyPath<UserModel, Field<String>> = \UserModel.$name
+    static var usernameKey: KeyPath<UserModel, Field<String>> = \UserModel.$email
     static var passwordHashKey: KeyPath<UserModel, Field<String>> = \UserModel.$passwordHash
 
     func verify(password: String) throws -> Bool {
@@ -62,12 +62,13 @@ extension UserModel: ModelAuthenticatable {
 }
 
 extension UserModel {
-    func generateToken(_ app: Application) throws -> String {
+    func generateToken(_ app: Application) throws -> UserToken {
         var expDate = Date()
         expDate.addTimeInterval(86_400)
         let exp = ExpirationClaim(value: expDate)
+        let value = try app.jwt.signers.get(kid: .private)!.sign(MyJWTPayload(id: id, name: name, exp: exp))
 
-        return try app.jwt.signers.get(kid: .private)!.sign(MyJWTPayload(id: id, name: name, exp: exp))
+        return try UserToken(value: value, userID: requireID())
     }
 }
 

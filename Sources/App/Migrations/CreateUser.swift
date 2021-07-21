@@ -6,11 +6,10 @@
 //
 
 import Fluent
-import Vapor
 
 struct CreateUser: Migration {
     func prepare(on database: Database) -> EventLoopFuture<Void> {
-        return database.schema(UserModel.schema)
+        database.schema(UserModel.schema)
             .id()
             .field("name", .string, .required)
             .field("email", .string, .required)
@@ -22,6 +21,6 @@ struct CreateUser: Migration {
     }
 
     func revert(on database: Database) -> EventLoopFuture<Void> {
-        return database.schema(UserModel.schema).delete()
+        database.schema(UserModel.schema).delete()
     }
 }
